@@ -1,5 +1,6 @@
 # Rice Classification with GP
-Rice serves globally as one of the most important staples of human food. The history of rice cultivation is long and as a result many different strands of rice have been cultivated that are now produced and consumed. Rice classification involves the categorization of distinct subgroups of rice by observing rice grains and their physical features. This assignment seeks to interpret a set of seven physical properties of rice to classify rice grains as one of two types of rice. 
+Classification of Rice Grains using an island-model GP system.
+
 
 ## Requirements
 This project may not work without the following requirements fulfilled.
