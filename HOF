@@ -1,0 +1,2 @@
+safe_division(add(0.7191974140060866, sub(x3, safe_division(x2, x1))), neg(0.5823748557961423))
+safe_division(add(sub(add(x4, 0.9792324182240228), 0.975187315225299), safe_division(x3, -0.37697358492130495)), neg(-0.6843023911755406))

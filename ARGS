@@ -1,0 +1,44 @@
+# ### ### ### ### ### ### ### ### ### ### ### #
+#
+# this file includes parameters for training  #
+#
+# ### ### ### ### ### ### ### ### ### ### ### #
+# POP_SIZE
+50
+# P_CROSSOVER
+0.90
+# P_MUTATION
+0.10
+# MAX_GENERATIONS
+20
+# HOF_SIZE (Hall of famers)
+2
+# T_SIZE (tournament)
+3
+# DEPTH
+13
+# SEED
+10
+# Training set size (by proportion of total dataset)
+0.40
+
+# # ⚠️⚠️⚠️ABSOLUTE HOFER ALERT ABSOLUTE HOFFER⚠️⚠️⚠️
+# # POP_SIZE
+# 250
+# # P_CROSSOVER
+# 0.90
+# # P_MUTATION
+# 0.05
+# # MAX_GENERATIONS
+# 20
+# # HOF_SIZE (Hall of famers)
+# 2
+# # T_SIZE (tournament)
+# 3
+# # DEPTH
+# 9
+# # SEED
+# 2
+# # Training set size (by proportion of total dataset)
+# 0.33
+# # MIN_DEPTH = 2
