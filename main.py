@@ -49,8 +49,8 @@ pset.renameArguments(
 )
 
 # Create Individuals
-creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax)
 
 toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=3, max_=7)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
@@ -65,13 +65,13 @@ toolbox.register("select", tools.selTournament, tournsize=T_SIZE)
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=5, max_=12)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
-toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
+toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=16))
+toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=16))
 
 def k_ring_swap(islands):
   amount = len(islands)
 
-  for i in range(POP_SIZE//NUM_ISLANDS):
+  for i in range(POP_SIZE // len(islands)):
     ind = random.randint(0, POP_SIZE-1)
 
     islands[i%amount][ind], islands[(i+1)%amount][ind] = islands[(i+1)%amount][ind], islands[i%amount][ind]
@@ -81,108 +81,126 @@ def safe_log(x):
     return math.log(x)
   return 0
 
-if __name__ == "__main__":
-  stats = tools.Statistics(key=operator.attrgetter("fitness.values"))
-  stats.register("avg", numpy.mean)
-  stats.register("min", numpy.min)
-  stats.register("max", numpy.max)
 
-  NUM_ISLANDS = 12
+stats = tools.Statistics(key=operator.attrgetter("fitness.values"))
+stats.register("avg", numpy.mean)
+stats.register("min", numpy.min)
+stats.register("max", numpy.max)
 
-  # for i in range(NUM_ISLANDS):
-  #   if not os.path.exists(f"stats/island{i}"):
-  #     os.mkdir(f"stats/island{i}")
+NUM_ISLANDS = 6
+islands = [toolbox.population(n=POP_SIZE) for _ in range(NUM_ISLANDS)]
 
-  # In the nested list: the first list is for averages, the seconds is for bests.
-  stats = [[[ [] for i in range(MAX_GENERATIONS) ], [ [] for i in range(MAX_GENERATIONS) ]] for i in range(NUM_ISLANDS)]
+RUNS = 10
 
-  islands = [toolbox.population(n=POP_SIZE) for _ in range(NUM_ISLANDS)]
+averages = [[ 0.0 for _ in range(MAX_GENERATIONS) ] for _ in range(NUM_ISLANDS)]
+bests    = [[ 0.0 for _ in range(MAX_GENERATIONS) ] for _ in range(NUM_ISLANDS)]
 
-  TIMES = 10
-  # We do this process TIMES times.
+for run in range(RUNS):
+  random.seed(run)
 
-  RUNS = 10
-  for i in range(RUNS):
-    random.seed(i+1)
+  for island_num, pop in enumerate(islands):
+    # The evaluation function is applied to all members of the population.  
+    fitnesses = toolbox.map(toolbox.evaluate, pop)
+    # The fitness is assigned to each individual.
+    for ind, fit in zip(pop, fitnesses):
+      ind.fitness.values = fit
 
-    for j in range(TIMES):
-      # Each iteration deals with one island at a time.
-      for islandNo, pop in enumerate(islands):
-        # The evaluation function is applied to all members of the population.  
-        fitnesses = toolbox.map(toolbox.evaluate, pop)
-        # The fitness is assigned to each individual.
-        for ind, fit in zip(pop, fitnesses):
-          ind.fitness.values = fit
+    # Number of generations.
+    for g in range(MAX_GENERATIONS):
+      # k individuals are selected from the population.
+      pop = toolbox.select(pop, k=len(pop))
 
-        # Number of generations.
-        for g in range(MAX_GENERATIONS):
-          # k individuals are selected from the population.
-          pop = toolbox.select(pop, k=len(pop))
+      # The existing population is duplicated.
+      offspring = [toolbox.clone(ind) for ind in pop]
 
-          # The existing population is duplicated.
-          offspring = [toolbox.clone(ind) for ind in pop]
+      # Crossover is applied to "a portion of consecutive individuals."
+      for child1, child2 in zip(offspring[::2], offspring[1::2]):
+        if random.random() < P_CROSSOVER:
+          toolbox.mate(child1, child2)
+          # Their existing fitnesses (from being cloned) are deleted.
+          del child1.fitness.values, child2.fitness.values
 
-          # Crossover is applied to "a portion of consecutive individuals."
-          for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < P_CROSSOVER:
-              toolbox.mate(child1, child2)
-              # Their existing fitnesses (from being cloned) are deleted.
-              del child1.fitness.values, child2.fitness.values
+      # A percentage of the newly crossed over offspring is mutated.
+      for mutant in offspring:
+        if random.random() < P_MUTATION:
+          toolbox.mutate(mutant)
+          # Make sure to delete the existing fitness value.
+          del mutant.fitness.values
 
-          # A percentage of the newly crossed over offspring is mutated.
-          for mutant in offspring:
-            if random.random() < P_MUTATION:
-              toolbox.mutate(mutant)
-              # Make sure to delete the existing fitness value.
-              del mutant.fitness.values
+      # Freshly produced individuals are filtered by the validity of their fitness.
+      invalids = [ind for ind in pop if not ind.fitness.valid]
+      # The remaining are given new fitness values.
+      fitnesses = toolbox.map(toolbox.evaluate, invalids)
+      for ind, fit in zip(invalids, fitnesses):
+        ind.fitness.values = fit
 
-          # Freshly produced individuals are filtered by the validity of their fitness.
-          invalids = [ind for ind in pop if not ind.fitness.valid]
-          # The remaining are given new fitness values.
-          fitnesses = toolbox.map(toolbox.evaluate, invalids)
-          for ind, fit in zip(invalids, fitnesses):
-            ind.fitness.values = fit
+      # If the generation count is a multiple of 5: 
+      # Two random islands are selected and a couple of their individuals are traded between each other.
+      if g % 10 == 0:
+        k_ring_swap(islands)
+      
+      # Record the averages.
+      avg = 0
+      for ind in pop:
+        avg += ind.fitness.values[0]
+      avg /= len(pop)
+      averages[island_num][g] += avg
 
-          if j == TIMES-1:
-            # Record statistics for this Island's Population's Generation.
+      # Record the bests.
+      best = 0
+      for ind in pop:
+        fit = ind.fitness.values[0]
+        if fit > best:
+          best = fit
+      bests[island_num][g] += best
 
-            # Averages.
-            stats_for_current_island = stats[islandNo]
-            average = 0
-            for ind in pop:
-              average += ind.fitness.values[0]
-            average /= len(pop)
-            stats_for_current_island[0][g] = safe_log(average)
+for island_num in range(len(averages)):
+  for g in range(len(averages[0])):
+    averages[island_num][g] /= RUNS
+    bests[island_num][g] /= RUNS
 
-            # Bests.
-            best = 0
-            for ind in pop:
-              if ind.fitness.values[0] < best:
-                best = ind.fitness.values[0]
-            stats_for_current_island[1][g] = safe_log(best)
+avgs_to_plot = []
+bests_to_plot = []
 
-          # If the generation count is a multiple of 5: 
-          # Two random islands are selected and a couple of their individuals are traded between each other.
-          if g % 5 == 0:
-            k_ring_swap(islands)
+for g in range(MAX_GENERATIONS):
+  avg = 0
+  best = 0
   
-  for i in range(RUNS):
-    for j in range(len(stats)):
-      for k in range(len(stats[j])):
-        for l in range(len(stats[j][k])):
-            stats[j][k][l] /= RUNS
+  for island_num in range(NUM_ISLANDS):
+    avg += averages[island_num][g]
+    best += bests[island_num][g]
+  
+  avg /= NUM_ISLANDS
+  best /= NUM_ISLANDS
 
-  for i in range(NUM_ISLANDS):
-    plt.clf()
-    plt.plot(stats[i][0], color="green", label="Average (Mean)")
-    plt.plot(stats[i][1], color="red", label="Best (Mean)")
-    plt.legend(loc="upper left")
-    plt.xlabel("Generation")
-    plt.ylabel(f'Fitness)')
-    plt.title(f'Average & Best Fitness for Individuals on Island {i+1}')
-    plt.savefig(f"plot{i+1}.png")
+  avg = 100 - 100*avg/len(TRAINING_DATA)
+  best = 100 - 100*best/len(TRAINING_DATA)
 
-  # Print the best of each island.
-  with open("HOF.txt", "w") as file:
-    for pop in islands:
-      file.write(str(tools.selBest(pop, k=1)[0]) + "\n")
+  avgs_to_plot.append(avg)
+  bests_to_plot.append(best)
+
+
+for i in range(NUM_ISLANDS):
+  plt.clf()
+  plt.plot(avgs_to_plot, color="green", label="Average (Mean)")
+  plt.plot(bests_to_plot, color="red", label="Best (Mean)")
+  plt.legend(loc="upper left")
+  plt.xlabel("Generation")
+  plt.ylabel(f'Fitness')
+  plt.title(f'Average & Best Fitness for Individuals through All Islands')
+  plt.savefig(f"plot.png")
+
+# Print the best of each island.
+with open("HOF.txt", "w") as file:
+  for pop in islands:
+    file.write(str(tools.selBest(pop, k=1)[0]) + "\n")
+    fitness, accuracy = tester(toolbox.compile(expr=tools.selBest(pop, k=1)[0]), test_data=TESTING_DATA)
+    print(
+        "Best individual accuracy: "
+        + str(accuracy)
+        + "\nIt had "
+        + str(fitness)
+        + " hits out of "
+        + str(len(TESTING_DATA))
+        + " data points"
+    )

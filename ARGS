@@ -10,17 +10,17 @@
 # P_MUTATION
 0.10
 # MAX_GENERATIONS
-25
+30
 # HOF_SIZE (Hall of famers)
 2
 # T_SIZE (tournament)
 3
 # DEPTH
-17
+16
 # SEED
 10
 # Training set size (by proportion of total dataset)
-0.40
+0.33
 
 # # ⚠️⚠️⚠️ABSOLUTE HOFER ALERT ABSOLUTE HOFFER⚠️⚠️⚠️
 # # POP_SIZE

@@ -21,3 +21,6 @@ def tester(individual: any, test_data: any) -> Tuple[int, float]:
 
     accuracy = hits * 100 / length
     return hits, accuracy
+
+if __name__ == "__main__":
+    pass

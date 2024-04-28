@@ -32,3 +32,6 @@ This function scrambles the data input to it.
 def shake_rice(data: List[list]) -> List[list]:
     random.shuffle(data)
     return data
+
+if __name__ == "__main__":
+    print(len(rice_reader("../data/delicious_rice.txt")))
