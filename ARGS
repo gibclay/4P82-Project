@@ -4,19 +4,19 @@
 #
 # ### ### ### ### ### ### ### ### ### ### ### #
 # POP_SIZE
-50
+500
 # P_CROSSOVER
 0.90
 # P_MUTATION
 0.10
 # MAX_GENERATIONS
-20
+25
 # HOF_SIZE (Hall of famers)
 2
 # T_SIZE (tournament)
 3
 # DEPTH
-13
+17
 # SEED
 10
 # Training set size (by proportion of total dataset)
